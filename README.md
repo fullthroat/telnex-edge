@@ -264,21 +264,6 @@ export MCP_AUTH_TOKEN=YOUR_MCP_TOKEN
 npm test
 ```
 
-## Demo checklist
-
-Before presenting, verify:
-
-- Assistant saved and active
-- Phone number attached
-- Dynamic Webhook URL ends in `/webhooks/telnyx`
-- MCP URL ends in `/mcp`
-- MCP authentication matches on both sides
-- Actor URL and KV namespace ID configured here
-- English and Swedish information paths tested
-- Callback name and number saved
-- Human transfer destination configured and tested
-- Metrics and logs open for the live demo
-
 ## Troubleshooting
 
 ### `ModuleNotFoundError: No module named 'function'`
