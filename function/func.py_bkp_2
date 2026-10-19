@@ -1,0 +1,382 @@
+"""Skatteverket voice concierge integration for Telnyx Edge Compute.
+
+The Telnyx portal workflow owns the spoken English/Swedish conversation.
+This function owns durable actions: information lookup, human-transfer
+requests, callback requests, session state, webhooks, MCP tools and metrics.
+"""
+from __future__ import annotations
+
+import asyncio
+import base64
+import hashlib
+import json
+import logging
+import os
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import uuid
+from collections import OrderedDict
+from dataclasses import dataclass
+from typing import Any, Optional
+
+try:
+    from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+except ImportError:  # pragma: no cover
+    InvalidSignature = Exception  # type: ignore[assignment,misc]
+    Ed25519PublicKey = None  # type: ignore[assignment,misc]
+
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
+log = logging.getLogger("skatteverket-edge")
+
+
+def _json(value: Any) -> bytes:
+    return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode()
+
+
+async def _respond(send, status: int, body: Any):
+    payload = _json(body)
+    await send({"type": "http.response.start", "status": status, "headers": [[b"content-type", b"application/json"], [b"content-length", str(len(payload)).encode()]]})
+    await send({"type": "http.response.body", "body": payload})
+
+
+async def _read_body(receive) -> bytes:
+    chunks: list[bytes] = []
+    while True:
+        message = await receive()
+        if message.get("type") == "http.request":
+            chunks.append(message.get("body", b""))
+            if not message.get("more_body", False):
+                return b"".join(chunks)
+
+
+def _headers(scope: dict[str, Any]) -> dict[str, str]:
+    return {k.decode().lower(): v.decode() for k, v in scope.get("headers", [])}
+
+
+def _value(data: dict[str, Any], *names: str, default: Any = None) -> Any:
+    for name in names:
+        if data.get(name) not in (None, ""):
+            return data[name]
+    return default
+
+
+@dataclass
+class Settings:
+    require_signature: bool
+    public_key: str
+    tolerance: int
+    telnyx_api_key: str
+    transfer_destination: str
+    state_backend: str
+    state_url: str
+    state_token: str
+    allow_memory_state: bool
+    callback_dispatch_url: str
+    mcp_token: str
+    live_queue_name: str
+    callback_queue_name: str
+    actor_base_url: str
+    kv_namespace_id: str
+    telnyx_base_url: str
+
+    @classmethod
+    def load(cls) -> "Settings":
+        return cls(
+            os.getenv("REQUIRE_WEBHOOK_SIGNATURE", "true").lower() == "true",
+            os.getenv("TELNYX_WEBHOOK_PUBLIC_KEY_BASE64", ""),
+            int(os.getenv("WEBHOOK_TOLERANCE_SECONDS", "300")),
+            os.getenv("TELNYX_API_KEY", ""),
+            os.getenv("HUMAN_TRANSFER_DESTINATION", ""),
+            os.getenv("STATE_BACKEND", "actor").lower(),
+            os.getenv("STATE_STORE_URL", "").rstrip("/"),
+            os.getenv("STATE_STORE_TOKEN", ""),
+            os.getenv("ALLOW_IN_MEMORY_STATE", "true").lower() == "true",
+            os.getenv("CALLBACK_DISPATCH_URL", "").rstrip("/"),
+            os.getenv("MCP_AUTH_TOKEN", ""),
+            os.getenv("LIVE_QUEUE_NAME", "live_tax_assistance"),
+            os.getenv("CALLBACK_QUEUE_NAME", "callback_requests"),
+            os.getenv("ACTOR_BASE_URL", "").rstrip("/"),
+            os.getenv("KV_NAMESPACE_ID", ""),
+            os.getenv("TELNYX_BASE_URL", "https://api.telnyx.com").rstrip("/"),
+        )
+
+
+class StateStore:
+    async def get(self, key: str) -> Optional[dict[str, Any]]: raise NotImplementedError
+    async def put(self, key: str, value: dict[str, Any], ttl_seconds: int = 86400) -> None: raise NotImplementedError
+
+
+class MemoryStateStore(StateStore):
+    """Explicit local-test fallback; use STATE_BACKEND=kv in deployment."""
+    def __init__(self) -> None: self.values: dict[str, tuple[float, dict[str, Any]]] = {}
+
+    async def get(self, key: str) -> Optional[dict[str, Any]]:
+        item = self.values.get(key)
+        if not item: return None
+        expires, value = item
+        if expires < time.time(): self.values.pop(key, None); return None
+        return dict(value)
+
+    async def put(self, key: str, value: dict[str, Any], ttl_seconds: int = 86400) -> None:
+        self.values[key] = (time.time() + ttl_seconds, dict(value))
+
+
+class JsonStateStore(StateStore):
+    """KV adapter for a Telnyx-hosted HTTP KV gateway.
+
+    The gateway contract is GET /keys/{key} and PUT /keys/{key} with
+    {"value": object, "ttl_seconds": number}. This keeps the function
+    independent of account-specific KV binding names.
+    """
+    def __init__(self, base_url: str, token: str) -> None: self.base_url, self.token = base_url, token
+
+    def _request(self, method: str, key: str, body: Optional[dict[str, Any]] = None) -> Optional[dict[str, Any]]:
+        url = f"{self.base_url}/keys/{urllib.parse.quote(key, safe='')}"
+        headers = {"accept": "application/json", "content-type": "application/json"}
+        if self.token: headers["authorization"] = f"Bearer {self.token}"
+        req = urllib.request.Request(url, data=_json(body) if body is not None else None, headers=headers, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=3) as response: return json.loads(response.read() or b"{}")
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404: return None
+            raise
+
+    async def get(self, key: str) -> Optional[dict[str, Any]]:
+        result = await asyncio.to_thread(self._request, "GET", key)
+        return result.get("value", result) if result else None
+
+    async def put(self, key: str, value: dict[str, Any], ttl_seconds: int = 86400) -> None:
+        await asyncio.to_thread(self._request, "PUT", key, {"value": value, "ttl_seconds": ttl_seconds})
+
+
+class TelnyxKvStore(StateStore):
+    """Native Telnyx KV namespace accessed through the Telnyx API."""
+    def __init__(self, base_url: str, api_key: str, namespace_id: str) -> None:
+        self.base_url, self.api_key, self.namespace_id = base_url.rstrip("/"), api_key, namespace_id
+
+    def _request(self, method: str, key: str, value: Optional[dict[str, Any]] = None, ttl_seconds: int = 86400) -> Optional[dict[str, Any]]:
+        url = f"{self.base_url}/v2/storage/kvs/{urllib.parse.quote(self.namespace_id, safe='')}/keys/{urllib.parse.quote(key, safe='')}"
+        headers = {"accept": "application/json", "authorization": f"Bearer {self.api_key}", "content-type": "application/json"}
+        body = _json(value) if value is not None else None
+        req = urllib.request.Request(url, data=body, headers=headers, method=method)
+        with urllib.request.urlopen(req, timeout=5) as response:
+            raw = response.read()
+            if not raw: return None
+            parsed = json.loads(raw)
+            return parsed.get("value", parsed) if isinstance(parsed, dict) else parsed
+
+    async def get(self, key: str) -> Optional[dict[str, Any]]:
+        try:
+            result = await asyncio.to_thread(self._request, "GET", key)
+            return result if isinstance(result, dict) else None
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404: return None
+            raise
+
+    async def put(self, key: str, value: dict[str, Any], ttl_seconds: int = 86400) -> None:
+        # TTL is retained in the record because the native API's expiry options
+        # vary by CLI/runtime version; records are also bounded by queue size.
+        payload = dict(value)
+        payload["_expires_at"] = int(time.time()) + ttl_seconds
+        await asyncio.to_thread(self._request, "PUT", key, payload, ttl_seconds)
+
+
+class ActorStateStore(StateStore):
+    """StateStore facade over one Stateful Actor per session."""
+    def __init__(self, base_url: str) -> None: self.base_url = base_url.rstrip("/")
+
+    def _request(self, method: str, key: str, value: Optional[dict[str, Any]] = None) -> Optional[dict[str, Any]]:
+        session_id = key.split(":", 1)[1]
+        action = "state" if method == "GET" else "update"
+        url = f"{self.base_url}/sessions/{urllib.parse.quote(session_id, safe='')}/{action}"
+        req = urllib.request.Request(url, data=_json({"patch": value}) if value is not None else None, headers={"content-type": "application/json"}, method=method if method == "GET" else "POST")
+        with urllib.request.urlopen(req, timeout=5) as response: return json.loads(response.read() or b"{}")
+
+    async def get(self, key: str) -> Optional[dict[str, Any]]:
+        try: return await asyncio.to_thread(self._request, "GET", key)
+        except urllib.error.HTTPError as exc:
+            if exc.code == 404: return None
+            raise
+
+    async def put(self, key: str, value: dict[str, Any], ttl_seconds: int = 86400) -> None:
+        await asyncio.to_thread(self._request, "POST", key, value)
+
+
+class Metrics:
+    def __init__(self) -> None: self.counts: dict[str, int] = {}
+    def inc(self, name: str) -> None: self.counts[name] = self.counts.get(name, 0) + 1
+    def snapshot(self) -> dict[str, Any]: return {"counters": self.counts, "timestamp": int(time.time())}
+
+
+class Function:
+    def __init__(self) -> None:
+        self.settings = Settings.load()
+        if self.settings.state_backend == "actor" and self.settings.actor_base_url:
+            self.store: StateStore = ActorStateStore(self.settings.actor_base_url)
+        elif self.settings.state_backend == "kv" and self.settings.state_url:
+            self.store: StateStore = JsonStateStore(self.settings.state_url, self.settings.state_token)
+        else: self.store = MemoryStateStore()
+        self.queue_store: StateStore = TelnyxKvStore(self.settings.telnyx_base_url, self.settings.telnyx_api_key, self.settings.kv_namespace_id) if self.settings.telnyx_api_key and self.settings.kv_namespace_id else self.store
+        self.metrics = Metrics()
+        self.seen: OrderedDict[str, float] = OrderedDict()
+        self.seen_ttl = int(os.getenv("IDEMPOTENCY_TTL_SECONDS", "86400"))
+
+    def start(self, cfg: dict[str, Any]) -> None: log.info(json.dumps({"event": "function_started", "state_backend": self.settings.state_backend}))
+    def stop(self) -> None: log.info(json.dumps({"event": "function_stopped"}))
+    def alive(self) -> dict[str, Any]: return {"alive": True}
+
+    def ready(self) -> dict[str, Any]:
+        state_ready = (self.settings.state_backend == "actor" and bool(self.settings.actor_base_url)) or (self.settings.state_backend == "kv" and bool(self.settings.state_url)) or self.settings.allow_memory_state
+        return {"ready": state_ready, "state_backend": self.settings.state_backend, "signature_verification": self.settings.require_signature, "actor_configured": bool(self.settings.actor_base_url), "kv_configured": bool(self.settings.kv_namespace_id and self.settings.telnyx_api_key), "transfer_configured": bool(self.settings.transfer_destination), "callback_dispatch_configured": bool(self.settings.callback_dispatch_url)}
+
+    def _verify(self, headers: dict[str, str], body: bytes) -> bool:
+        if not self.settings.require_signature: return True
+        timestamp, signature = headers.get("telnyx-timestamp"), headers.get("telnyx-signature-ed25519")
+        if not timestamp or not signature or not self.settings.public_key or Ed25519PublicKey is None: return False
+        try:
+            if abs(time.time() - int(timestamp)) > self.settings.tolerance: return False
+            key = Ed25519PublicKey.from_public_bytes(base64.b64decode(self.settings.public_key))
+            key.verify(base64.b64decode(signature), timestamp.encode() + b"." + body)
+            return True
+        except (ValueError, TypeError, InvalidSignature): return False
+
+    def _event_id(self, event: dict[str, Any], body: bytes) -> str:
+        data = event.get("data", {}) if isinstance(event.get("data"), dict) else {}
+        return str(_value(event, "id", default=None) or _value(data, "id", default=None) or hashlib.sha256(body).hexdigest())
+
+    def _duplicate(self, event_id: str) -> bool:
+        now = time.time()
+        for key, stamp in list(self.seen.items()):
+            if now - stamp > self.seen_ttl: self.seen.pop(key, None)
+        duplicate = event_id in self.seen; self.seen[event_id] = now; self.seen.move_to_end(event_id)
+        while len(self.seen) > 10000: self.seen.popitem(last=False)
+        return duplicate
+
+    @staticmethod
+    def _payload(event: dict[str, Any]) -> dict[str, Any]:
+        data = event.get("data", {}) if isinstance(event.get("data"), dict) else {}
+        payload = data.get("payload", {})
+        return payload if isinstance(payload, dict) else event.get("payload", {}) or {}
+
+    @staticmethod
+    def _language(value: Any) -> str:
+        text = str(value or "").lower()
+        return "sv-SE" if any(word in text for word in ("swedish", "svenska", "sv-se", "sverige")) else "en-US"
+
+    async def _session(self, session_id: str) -> dict[str, Any]:
+        return (await self.store.get(f"session:{session_id}")) or {"session_id": session_id}
+
+    async def _save(self, session_id: str, patch: dict[str, Any]) -> dict[str, Any]:
+        state = await self._session(session_id); state.update(patch); state["updated_at"] = int(time.time())
+        await self.store.put(f"session:{session_id}", state); return state
+
+    async def information(self, topic: str, language: str) -> dict[str, Any]:
+        sv = language.startswith("sv")
+        answers = {
+            "declaration": ("Allmän information: deklarationsdatum och dokument beror på din situation. Kontrollera aktuellt datum på Skatteverket.se." if sv else "General information: declaration deadlines and required documents depend on your situation. Check Skatteverket.se for the current official deadline."),
+            "deadline": ("Allmän information: tidsfrister varierar beroende på deklarationstyp. Kontrollera aktuellt datum på Skatteverket.se." if sv else "General information: deadlines vary by declaration type. Check Skatteverket.se for the current official date."),
+            "documents": ("Allmän information: spara inkomstuppgifter, kvitton och andra underlag som hör till deklarationen." if sv else "General information: keep income statements, receipts, and supporting documents relevant to your declaration."),
+        }
+        key = next((key for key in answers if key in topic.lower()), None)
+        answer = answers.get(key, "Jag kan ge allmän information om deklarationer, tidsfrister och dokument." if sv else "I can provide general information about declarations, deadlines, and documents.")
+        return {"topic": topic, "language": language, "answer": answer, "disclaimer": "General information only; not individual tax advice."}
+
+    async def callback(self, session_id: str, name: str, number: str, language: str) -> dict[str, Any]:
+        request_id = str(uuid.uuid4())
+        record = {"request_id": request_id, "queue": self.settings.callback_queue_name, "session_id": session_id, "callback_name": name.strip(), "callback_number": number.strip(), "language": language, "status": "queued", "created_at": int(time.time())}
+        await self.queue_store.put(f"callback:{request_id}", record, 604800)
+        await self._enqueue(self.settings.callback_queue_name, record)
+        await self._save(session_id, {"callback_request_id": request_id, "callback_name": name.strip(), "callback_number": number.strip(), "callback_status": "queued"})
+        if self.settings.callback_dispatch_url: await self._post(self.settings.callback_dispatch_url, record, {})
+        self.metrics.inc("callback_requests_total"); return record
+
+    async def transfer(self, session_id: str, call_control_id: str, language: str) -> dict[str, Any]:
+        ticket = str(uuid.uuid4()); result: dict[str, Any] = {"ticket_id": ticket, "queue": self.settings.live_queue_name, "session_id": session_id, "status": "queued", "language": language, "call_control_id": call_control_id}
+        if call_control_id and self.settings.telnyx_api_key:
+            result["telnyx"] = await self._post(f"{self.settings.telnyx_base_url}/v2/calls/{call_control_id}/actions/enqueue", {"queue_name": self.settings.live_queue_name}, {"authorization": f"Bearer {self.settings.telnyx_api_key}"})
+            result["status"] = "transfer_requested" if result["telnyx"].get("status") == 200 else "queued"
+        await self.store.put(f"transfer:{ticket}", result); await self._save(session_id, {"transfer_ticket_id": ticket, "transfer_status": result["status"]})
+        await self._enqueue(self.settings.live_queue_name, result)
+        self.metrics.inc("human_transfer_requests_total"); return result
+
+    async def _enqueue(self, queue_name: str, record: dict[str, Any]) -> None:
+        """Append a request to a named queue using the configured state store."""
+        key = f"queue:{queue_name}"
+        queue = await self.queue_store.get(key) or {"name": queue_name, "items": []}
+        items = queue.get("items", [])
+        items.append(record)
+        queue["items"] = items[-1000:]
+        queue["updated_at"] = int(time.time())
+        await self.queue_store.put(key, queue, 604800)
+        self.metrics.inc(f"queue_{queue_name}_enqueued_total")
+
+    async def _post(self, url: str, value: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+        request = urllib.request.Request(url, data=_json(value), headers={"content-type": "application/json", **headers}, method="POST")
+        try:
+            with urllib.request.urlopen(request, timeout=5) as response: return {"status": response.status, "body": json.loads(response.read() or b"{}")}
+        except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
+            log.error(json.dumps({"event": "outbound_request_failed", "error": str(exc)})); return {"status": "failed"}
+
+    async def variables(self, event: dict[str, Any]) -> dict[str, Any]:
+        payload = self._payload(event); session_id = str(_value(payload, "call_control_id", "conversation_id", "session_id", default=event.get("id") or uuid.uuid4()))
+        language = self._language(_value(payload, "language", "locale", "spoken_language", default="en-US")); state = await self._session(session_id)
+        variables = {"session_id": session_id, "language": language, "callback_name": state.get("callback_name", ""), "callback_number": state.get("callback_number", ""), "callback_status": state.get("callback_status", ""), "transfer_status": state.get("transfer_status", "")}
+        await self._save(session_id, {"language": language, "last_event_type": (event.get("data", {}) or {}).get("event_type")}); return variables
+
+    def _mcp_auth(self, headers: dict[str, str]) -> bool:
+        return not self.settings.mcp_token or headers.get("authorization", "") == f"Bearer {self.settings.mcp_token}"
+
+    async def _mcp(self, body: bytes, headers: dict[str, str], send) -> None:
+        if not self._mcp_auth(headers): return await _respond(send, 401, {"error": "unauthorized"})
+        request = json.loads(body or b"{}"); method, request_id = request.get("method"), request.get("id")
+        tools = [
+            {"name": "lookup_tax_information", "description": "Limited general tax information in English or Swedish.", "inputSchema": {"type": "object", "properties": {"topic": {"type": "string"}, "language": {"type": "string"}}, "required": ["topic"]}},
+            {"name": "create_callback_request", "description": "Queue a confirmed callback request.", "inputSchema": {"type": "object", "properties": {"session_id": {"type": "string"}, "callback_name": {"type": "string"}, "callback_number": {"type": "string"}, "language": {"type": "string"}}, "required": ["session_id", "callback_name", "callback_number"]}},
+            {"name": "request_human_transfer", "description": "Create a human tax-assistant transfer request.", "inputSchema": {"type": "object", "properties": {"session_id": {"type": "string"}, "call_control_id": {"type": "string"}, "language": {"type": "string"}}, "required": ["session_id"]}},
+            {"name": "get_call_session", "description": "Read workflow state for a call.", "inputSchema": {"type": "object", "properties": {"session_id": {"type": "string"}}, "required": ["session_id"]}},
+        ]
+        if method == "initialize": result = {"protocolVersion": "2024-11-05", "capabilities": {"tools": {}}, "serverInfo": {"name": "skatteverket-edge", "version": "2.0.0"}}
+        elif method == "tools/list": result = {"tools": tools}
+        elif method == "tools/call":
+            params, args = request.get("params", {}), request.get("params", {}).get("arguments", {}); name = params.get("name")
+            if name == "lookup_tax_information": value = await self.information(str(args.get("topic", "")), str(args.get("language", "en-US")))
+            elif name == "create_callback_request": value = await self.callback(str(args["session_id"]), str(args["callback_name"]), str(args["callback_number"]), str(args.get("language", "en-US")))
+            elif name == "request_human_transfer": value = await self.transfer(str(args["session_id"]), str(args.get("call_control_id", "")), str(args.get("language", "en-US")))
+            elif name == "get_call_session": value = await self._session(str(args["session_id"]))
+            else: return await _respond(send, 200, {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32601, "message": "Unknown tool"}})
+            result = {"content": [{"type": "text", "text": json.dumps(value, ensure_ascii=False)}]}
+        else: return await _respond(send, 200, {"jsonrpc": "2.0", "id": request_id, "error": {"code": -32601, "message": "Unsupported method"}})
+        return await _respond(send, 200, {"jsonrpc": "2.0", "id": request_id, "result": result})
+
+    async def handle(self, scope, receive, send):
+        if scope.get("type") != "http": return await _respond(send, 400, {"error": "invalid_scope"})
+        method, path, headers = scope.get("method", "GET").upper(), scope.get("path", "/"), _headers(scope); request_id = headers.get("x-request-id", uuid.uuid4().hex[:16])
+        if method == "GET" and path in ("/", "/health/live", "/health/readiness", "/health/ready", "/metrics"):
+            body = self.alive() if path in ("/", "/health/live") else self.ready() if "read" in path else self.metrics.snapshot(); return await _respond(send, 200, {**body, "request_id": request_id})
+        body = await _read_body(receive)
+        if path == "/mcp" and method == "POST":
+            try: return await self._mcp(body, headers, send)
+            except (ValueError, json.JSONDecodeError, KeyError): return await _respond(send, 400, {"error": "invalid_mcp_request"})
+        valid_paths = ("/webhooks/telnyx", "/webhook", "/api/workflow", "/api/callback", "/api/transfer", "/api/information")
+        if method != "POST" or path not in valid_paths: return await _respond(send, 404, {"error": "not_found"})
+        if path == "/webhooks/telnyx" and not self._verify(headers, body): self.metrics.inc("webhook_signature_failures_total"); return await _respond(send, 401, {"error": "invalid_signature"})
+        try: event = json.loads(body or b"{}")
+        except json.JSONDecodeError: return await _respond(send, 400, {"error": "invalid_json"})
+        if path in ("/webhooks/telnyx", "/webhook", "/api/workflow"):
+            event_id = self._event_id(event, body)
+            if self._duplicate(event_id): return await _respond(send, 200, {"ok": True, "duplicate": True, "event_id": event_id})
+            variables = await self.variables(event); self.metrics.inc("webhooks_processed_total")
+            log.info(json.dumps({"event": "workflow_webhook", "request_id": request_id, "event_id": event_id}))
+            return await _respond(send, 200, {"ok": True, "event_id": event_id, "dynamic_variables": variables, "variables": variables})
+        payload = event.get("payload", event); session_id = str(payload.get("session_id") or payload.get("call_control_id") or uuid.uuid4()); language = self._language(payload.get("language", "en-US"))
+        if path == "/api/information": result = await self.information(str(payload.get("topic", "")), language)
+        elif path == "/api/callback": result = await self.callback(session_id, str(payload.get("callback_name", "")), str(payload.get("callback_number", "")), language)
+        else: result = await self.transfer(session_id, str(payload.get("call_control_id", "")), language)
+        return await _respond(send, 200, {"ok": True, "request_id": request_id, "result": result})
+
+
+def new() -> Function:
+    return Function()

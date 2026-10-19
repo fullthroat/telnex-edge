@@ -32,6 +32,11 @@ logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO").upper())
 log = logging.getLogger("skatteverket-edge")
 
 
+def _log(level: int, event: str, **fields: Any) -> None:
+    """Emit searchable JSON logs without exposing secrets or full phone numbers."""
+    log.log(level, json.dumps({"event": event, **fields}, ensure_ascii=False, default=str))
+
+
 def _json(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode()
 
@@ -114,6 +119,7 @@ class MemoryStateStore(StateStore):
     def __init__(self) -> None: self.values: dict[str, tuple[float, dict[str, Any]]] = {}
 
     async def get(self, key: str) -> Optional[dict[str, Any]]:
+        _log(logging.DEBUG, "state_read", backend="memory", key=key)
         item = self.values.get(key)
         if not item: return None
         expires, value = item
@@ -121,6 +127,7 @@ class MemoryStateStore(StateStore):
         return dict(value)
 
     async def put(self, key: str, value: dict[str, Any], ttl_seconds: int = 86400) -> None:
+        _log(logging.DEBUG, "state_write", backend="memory", key=key, ttl_seconds=ttl_seconds)
         self.values[key] = (time.time() + ttl_seconds, dict(value))
 
 
@@ -158,30 +165,49 @@ class TelnyxKvStore(StateStore):
         self.base_url, self.api_key, self.namespace_id = base_url.rstrip("/"), api_key, namespace_id
 
     def _request(self, method: str, key: str, value: Optional[dict[str, Any]] = None, ttl_seconds: int = 86400) -> Optional[dict[str, Any]]:
-        url = f"{self.base_url}/v2/storage/kvs/{urllib.parse.quote(self.namespace_id, safe='')}/keys/{urllib.parse.quote(key, safe='')}"
+        url = f"{self.base_url}/v2/storage/kvs/{urllib.parse.quote(self.namespace_id, safe='')}/keys/{urllib.parse.quote(key, safe='/')}"
         headers = {"accept": "application/json", "authorization": f"Bearer {self.api_key}", "content-type": "application/json"}
         body = _json(value) if value is not None else None
         req = urllib.request.Request(url, data=body, headers=headers, method=method)
-        with urllib.request.urlopen(req, timeout=5) as response:
-            raw = response.read()
-            if not raw: return None
-            parsed = json.loads(raw)
-            return parsed.get("value", parsed) if isinstance(parsed, dict) else parsed
+        try:
+            with urllib.request.urlopen(req, timeout=5) as response:
+                raw = response.read()
+                if not raw: return None
+                parsed = json.loads(raw)
+                return parsed.get("value", parsed) if isinstance(parsed, dict) else parsed
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:500]
+            raise RuntimeError(f"Telnyx KV HTTP {exc.code}: {detail}") from exc
 
     async def get(self, key: str) -> Optional[dict[str, Any]]:
         try:
+            _log(logging.DEBUG, "kv_read_started", backend="telnyx", key=key)
             result = await asyncio.to_thread(self._request, "GET", key)
+            _log(logging.INFO, "kv_read_completed", backend="telnyx", key=key, found=result is not None)
             return result if isinstance(result, dict) else None
         except urllib.error.HTTPError as exc:
             if exc.code == 404: return None
+            _log(logging.ERROR, "kv_read_error", backend="telnyx", key=key, error=str(exc))
+            raise
+        except RuntimeError as exc:
+            # A missing queue is normal on its first append; treat it as empty.
+            if "Telnyx KV HTTP 404" in str(exc):
+                _log(logging.INFO, "kv_read_completed", backend="telnyx", key=key, found=False)
+                return None
+            _log(logging.ERROR, "kv_read_error", backend="telnyx", key=key, error=str(exc))
             raise
 
     async def put(self, key: str, value: dict[str, Any], ttl_seconds: int = 86400) -> None:
-        # TTL is retained in the record because the native API's expiry options
-        # vary by CLI/runtime version; records are also bounded by queue size.
+        # Telnyx KV expects the record under `value` and the TTL beside it.
+        # The API key is injected by the Edge Compute binding and is never logged.
         payload = dict(value)
-        payload["_expires_at"] = int(time.time()) + ttl_seconds
-        await asyncio.to_thread(self._request, "PUT", key, payload, ttl_seconds)
+        _log(logging.INFO, "kv_write_started", backend="telnyx", key=key, ttl_seconds=ttl_seconds)
+        try:
+            await asyncio.to_thread(self._request, "PUT", key, {"value": payload, "ttl_seconds": ttl_seconds}, ttl_seconds)
+            _log(logging.INFO, "kv_write_completed", backend="telnyx", key=key)
+        except Exception as exc:
+            _log(logging.ERROR, "kv_write_error", backend="telnyx", key=key, error=str(exc))
+            raise
 
 
 class ActorStateStore(StateStore):
@@ -196,13 +222,24 @@ class ActorStateStore(StateStore):
         with urllib.request.urlopen(req, timeout=5) as response: return json.loads(response.read() or b"{}")
 
     async def get(self, key: str) -> Optional[dict[str, Any]]:
-        try: return await asyncio.to_thread(self._request, "GET", key)
+        try:
+            _log(logging.DEBUG, "actor_read_started", key=key)
+            result = await asyncio.to_thread(self._request, "GET", key)
+            _log(logging.INFO, "actor_read_completed", key=key, found=result is not None)
+            return result
         except urllib.error.HTTPError as exc:
             if exc.code == 404: return None
+            _log(logging.ERROR, "actor_read_error", key=key, error=str(exc))
             raise
 
     async def put(self, key: str, value: dict[str, Any], ttl_seconds: int = 86400) -> None:
-        await asyncio.to_thread(self._request, "POST", key, value)
+        _log(logging.INFO, "actor_write_started", key=key)
+        try:
+            await asyncio.to_thread(self._request, "POST", key, value)
+            _log(logging.INFO, "actor_write_completed", key=key)
+        except Exception as exc:
+            _log(logging.ERROR, "actor_write_error", key=key, error=str(exc))
+            raise
 
 
 class Metrics:
@@ -223,9 +260,10 @@ class Function:
         self.metrics = Metrics()
         self.seen: OrderedDict[str, float] = OrderedDict()
         self.seen_ttl = int(os.getenv("IDEMPOTENCY_TTL_SECONDS", "86400"))
+        _log(logging.INFO, "function_configured", state_backend=self.settings.state_backend, actor_configured=bool(self.settings.actor_base_url), kv_configured=bool(self.settings.kv_namespace_id and self.settings.telnyx_api_key))
 
-    def start(self, cfg: dict[str, Any]) -> None: log.info(json.dumps({"event": "function_started", "state_backend": self.settings.state_backend}))
-    def stop(self) -> None: log.info(json.dumps({"event": "function_stopped"}))
+    def start(self, cfg: dict[str, Any]) -> None: _log(logging.INFO, "function_started", state_backend=self.settings.state_backend)
+    def stop(self) -> None: _log(logging.INFO, "function_stopped")
     def alive(self) -> dict[str, Any]: return {"alive": True}
 
     def ready(self) -> dict[str, Any]:
@@ -274,6 +312,7 @@ class Function:
         await self.store.put(f"session:{session_id}", state); return state
 
     async def information(self, topic: str, language: str) -> dict[str, Any]:
+        _log(logging.INFO, "workflow_information_started", topic=topic, language=language)
         sv = language.startswith("sv")
         answers = {
             "declaration": ("Allmän information: deklarationsdatum och dokument beror på din situation. Kontrollera aktuellt datum på Skatteverket.se." if sv else "General information: declaration deadlines and required documents depend on your situation. Check Skatteverket.se for the current official deadline."),
@@ -282,29 +321,36 @@ class Function:
         }
         key = next((key for key in answers if key in topic.lower()), None)
         answer = answers.get(key, "Jag kan ge allmän information om deklarationer, tidsfrister och dokument." if sv else "I can provide general information about declarations, deadlines, and documents.")
-        return {"topic": topic, "language": language, "answer": answer, "disclaimer": "General information only; not individual tax advice."}
+        result = {"topic": topic, "language": language, "answer": answer, "disclaimer": "General information only; not individual tax advice."}
+        _log(logging.INFO, "workflow_information_completed", topic=topic, language=language)
+        return result
 
     async def callback(self, session_id: str, name: str, number: str, language: str) -> dict[str, Any]:
+        _log(logging.INFO, "workflow_callback_received", session_id=session_id, language=language, name_present=bool(name.strip()), number_last4=number.strip()[-4:])
         request_id = str(uuid.uuid4())
         record = {"request_id": request_id, "queue": self.settings.callback_queue_name, "session_id": session_id, "callback_name": name.strip(), "callback_number": number.strip(), "language": language, "status": "queued", "created_at": int(time.time())}
-        await self.queue_store.put(f"callback:{request_id}", record, 604800)
+        await self.queue_store.put(f"callback/{request_id}", record, 604800)
         await self._enqueue(self.settings.callback_queue_name, record)
         await self._save(session_id, {"callback_request_id": request_id, "callback_name": name.strip(), "callback_number": number.strip(), "callback_status": "queued"})
         if self.settings.callback_dispatch_url: await self._post(self.settings.callback_dispatch_url, record, {})
-        self.metrics.inc("callback_requests_total"); return record
+        self.metrics.inc("callback_requests_total"); _log(logging.INFO, "workflow_callback_queued", session_id=session_id, request_id=request_id, queue=self.settings.callback_queue_name); return record
 
     async def transfer(self, session_id: str, call_control_id: str, language: str) -> dict[str, Any]:
+        _log(logging.INFO, "workflow_human_transfer_received", session_id=session_id, language=language, call_control_id_present=bool(call_control_id))
         ticket = str(uuid.uuid4()); result: dict[str, Any] = {"ticket_id": ticket, "queue": self.settings.live_queue_name, "session_id": session_id, "status": "queued", "language": language, "call_control_id": call_control_id}
         if call_control_id and self.settings.telnyx_api_key:
             result["telnyx"] = await self._post(f"{self.settings.telnyx_base_url}/v2/calls/{call_control_id}/actions/enqueue", {"queue_name": self.settings.live_queue_name}, {"authorization": f"Bearer {self.settings.telnyx_api_key}"})
             result["status"] = "transfer_requested" if result["telnyx"].get("status") == 200 else "queued"
-        await self.store.put(f"transfer:{ticket}", result); await self._save(session_id, {"transfer_ticket_id": ticket, "transfer_status": result["status"]})
+        # The Actor owns the authoritative session state; the live queue record
+        # is persisted below in Telnyx KV. Do not write a non-session key to
+        # ActorStateStore, which is intentionally scoped to one call/session.
+        await self._save(session_id, {"transfer_ticket_id": ticket, "transfer_status": result["status"]})
         await self._enqueue(self.settings.live_queue_name, result)
-        self.metrics.inc("human_transfer_requests_total"); return result
+        self.metrics.inc("human_transfer_requests_total"); _log(logging.INFO, "workflow_human_transfer_queued", session_id=session_id, ticket_id=ticket, queue=self.settings.live_queue_name, status=result["status"]); return result
 
     async def _enqueue(self, queue_name: str, record: dict[str, Any]) -> None:
         """Append a request to a named queue using the configured state store."""
-        key = f"queue:{queue_name}"
+        key = f"queue/{queue_name}"
         queue = await self.queue_store.get(key) or {"name": queue_name, "items": []}
         items = queue.get("items", [])
         items.append(record)
@@ -312,13 +358,17 @@ class Function:
         queue["updated_at"] = int(time.time())
         await self.queue_store.put(key, queue, 604800)
         self.metrics.inc(f"queue_{queue_name}_enqueued_total")
+        _log(logging.INFO, "queue_record_written", queue=queue_name, record_id=record.get("request_id") or record.get("ticket_id"))
 
     async def _post(self, url: str, value: dict[str, Any], headers: dict[str, str]) -> dict[str, Any]:
+        _log(logging.INFO, "outbound_request_started", target=url.split("/v2/")[-1])
         request = urllib.request.Request(url, data=_json(value), headers={"content-type": "application/json", **headers}, method="POST")
         try:
-            with urllib.request.urlopen(request, timeout=5) as response: return {"status": response.status, "body": json.loads(response.read() or b"{}")}
+            with urllib.request.urlopen(request, timeout=5) as response:
+                _log(logging.INFO, "outbound_request_completed", target=url.split("/v2/")[-1], status=response.status)
+                return {"status": response.status, "body": json.loads(response.read() or b"{}")}
         except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
-            log.error(json.dumps({"event": "outbound_request_failed", "error": str(exc)})); return {"status": "failed"}
+            _log(logging.ERROR, "outbound_request_failed", target=url.split("/v2/")[-1], error=str(exc)); return {"status": "failed"}
 
     async def variables(self, event: dict[str, Any]) -> dict[str, Any]:
         payload = self._payload(event); session_id = str(_value(payload, "call_control_id", "conversation_id", "session_id", default=event.get("id") or uuid.uuid4()))
@@ -369,13 +419,18 @@ class Function:
             event_id = self._event_id(event, body)
             if self._duplicate(event_id): return await _respond(send, 200, {"ok": True, "duplicate": True, "event_id": event_id})
             variables = await self.variables(event); self.metrics.inc("webhooks_processed_total")
-            log.info(json.dumps({"event": "workflow_webhook", "request_id": request_id, "event_id": event_id}))
+            _log(logging.INFO, "workflow_webhook_processed", request_id=request_id, event_id=event_id, session_id=variables.get("session_id"), language=variables.get("language"))
             return await _respond(send, 200, {"ok": True, "event_id": event_id, "dynamic_variables": variables, "variables": variables})
-        payload = event.get("payload", event); session_id = str(payload.get("session_id") or payload.get("call_control_id") or uuid.uuid4()); language = self._language(payload.get("language", "en-US"))
-        if path == "/api/information": result = await self.information(str(payload.get("topic", "")), language)
-        elif path == "/api/callback": result = await self.callback(session_id, str(payload.get("callback_name", "")), str(payload.get("callback_number", "")), language)
-        else: result = await self.transfer(session_id, str(payload.get("call_control_id", "")), language)
-        return await _respond(send, 200, {"ok": True, "request_id": request_id, "result": result})
+        try:
+            payload = event.get("payload", event); session_id = str(payload.get("session_id") or payload.get("call_control_id") or uuid.uuid4()); language = self._language(payload.get("language", "en-US"))
+            _log(logging.INFO, "workflow_endpoint_received", path=path, session_id=session_id, language=language)
+            if path == "/api/information": result = await self.information(str(payload.get("topic", "")), language)
+            elif path == "/api/callback": result = await self.callback(session_id, str(payload.get("callback_name", "")), str(payload.get("callback_number", "")), language)
+            else: result = await self.transfer(session_id, str(payload.get("call_control_id", "")), language)
+            return await _respond(send, 200, {"ok": True, "request_id": request_id, "result": result})
+        except Exception as exc:
+            _log(logging.ERROR, "workflow_request_failed", path=path, request_id=request_id, error=str(exc))
+            return await _respond(send, 502, {"ok": False, "request_id": request_id, "error": "upstream_request_failed"})
 
 
 def new() -> Function:

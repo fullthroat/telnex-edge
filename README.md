@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## Skatteverket Voice Assistant Edge Function
 
 This Python Edge Function is the integration layer for the Skatteverket English/Swedish Telnyx AI Assistant. The Assistant owns the spoken conversation and workflow. This function handles backend actions during a call:
@@ -269,10 +270,30 @@ npm test
 ### `ModuleNotFoundError: No module named 'function'`
 
 Check that the wheel contains:
+=======
+# Skatteverket Edge Function
+
+Integration layer for the Telnyx AI Assistant workflow. The portal workflow
+performs spoken English/Swedish triage; this function provides the actions.
+
+Endpoints:
+
+- `POST /api/information` — limited general tax information
+- `POST /api/transfer` — human-transfer request; optionally invokes Telnyx Call Control transfer
+- `POST /api/callback` — stores confirmed `callback_name` and `callback_number`
+- `POST /webhooks/telnyx` — verifies, deduplicates, and returns `dynamic_variables`
+- `POST /mcp` — MCP JSON-RPC with four tools
+- `GET /health/live`, `/health/readiness`, `/metrics`
+
+## Deploy
+
+Keep this layout exactly:
+>>>>>>> 02dbce4 (changes in the function for workflow and test functionality)
 
 ```text
 function/__init__.py
 function/func.py
+<<<<<<< HEAD
 ```
 
 Verify it locally:
@@ -306,3 +327,56 @@ telnyx-edge ship status skatt-voice --logs
 
 Wait for an operation to finish before resetting or shipping again.
 
+=======
+pyproject.toml
+func.toml
+```
+
+Copy `func.toml.example` to `func.toml`, fill in the function ID, and use
+`telnyx-edge secrets add` for sensitive values. Do not commit `func.toml`.
+
+Configure `STATE_BACKEND=actor`, `ACTOR_BASE_URL`, and `KV_NAMESPACE_ID`.
+`ACTOR_BASE_URL` is the deployed Stateful Actor service URL. The Actor owns
+per-call state; native Telnyx KV stores callback/live queue records. Provision
+the namespace once with `telnyx-edge storage kv create --name skatteverket-voice-state`
+and put its returned ID in `KV_NAMESPACE_ID`. Do not put an API key in
+`func.toml`; use a secure Telnyx binding/secret that injects `TELNYX_API_KEY`.
+
+## Portal wiring
+
+Use the deployed function URL as the Dynamic Webhook/MCP URL. The webhook
+response exposes `session_id`, `language`, `callback_name`, `callback_number`,
+`callback_status`, and `transfer_status`.
+
+In the MCP server form choose HTTP and append `/mcp`. Configure the same bearer
+token if `MCP_AUTH_TOKEN` is enabled.
+
+The human path uses the native Telnyx voice queue named by `LIVE_QUEUE_NAME`.
+The callback path uses the KV-backed queue named by `CALLBACK_QUEUE_NAME`.
+The webhook public key, phone number, assistant, and queue provisioning remain
+live account settings.
+
+Requests are stored in two separate named queues:
+
+- `LIVE_QUEUE_NAME` (default `live_tax_assistance`)
+- `CALLBACK_QUEUE_NAME` (default `callback_requests`)
+
+## Local checks
+
+```powershell
+python -m py_compile function\func.py
+python -m pytest -q
+```
+
+The integration test exercises the HTTP workflow, webhook variables, MCP tool
+listing/calls, bilingual information, callback and human-transfer queue
+records, session state, and metrics without making a phone call. It uses an
+in-memory store locally and never sends real telephony traffic.
+
+If the local pytest runner does not exit cleanly, run the deterministic test
+directly:
+
+```powershell
+python tests\test_integration.py
+```
+>>>>>>> 02dbce4 (changes in the function for workflow and test functionality)

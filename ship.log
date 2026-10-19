@@ -1,100 +1,124 @@
 nohup: ignoring input
 Resolving target directory...
-{"time":"2026-10-18T00:26:15.425469023+02:00","level":"DEBUG","msg":"Starting target directory resolution"}
+{"time":"2026-10-20T01:09:48.950358904+02:00","level":"DEBUG","msg":"Starting target directory resolution"}
 ✓ Target directory resolved: /home/kaunain/telnyx-workspace/skat-voice
 Checking function skeleton...
-{"time":"2026-10-18T00:26:15.425503044+02:00","level":"DEBUG","msg":"Validating function skeleton","directory":"/home/kaunain/telnyx-workspace/skat-voice"}
+{"time":"2026-10-20T01:09:48.950404881+02:00","level":"DEBUG","msg":"Validating function skeleton","directory":"/home/kaunain/telnyx-workspace/skat-voice"}
 ✓ Function skeleton validated: skat-voice (ID: 135c6541-3412-4fb5-8072-fe1b324a2a6d)
 Validating function name...
-{"time":"2026-10-18T00:26:15.4256894+02:00","level":"DEBUG","msg":"Validating function name format","name":"skat-voice"}
+{"time":"2026-10-20T01:09:48.95058593+02:00","level":"DEBUG","msg":"Validating function name format","name":"skat-voice"}
 ✓ Function name validated: skat-voice
 Checking global configuration...
-{"time":"2026-10-18T00:26:15.425750136+02:00","level":"DEBUG","msg":"Loading global configuration"}
+{"time":"2026-10-20T01:09:48.950667363+02:00","level":"DEBUG","msg":"Loading global configuration"}
 ✓ Global configuration found
 Validating authentication...
-{"time":"2026-10-18T00:26:15.425759598+02:00","level":"DEBUG","msg":"Validating authentication credentials"}
+{"time":"2026-10-20T01:09:48.950676912+02:00","level":"DEBUG","msg":"Validating authentication credentials"}
 ✓ Authentication validated (API key)
 Collecting function files...
-{"time":"2026-10-18T00:26:15.425769725+02:00","level":"DEBUG","msg":"Starting file collection","directory":"/home/kaunain/telnyx-workspace/skat-voice"}
-✓ Collected 8 files for shipping
+{"time":"2026-10-20T01:09:48.950686608+02:00","level":"DEBUG","msg":"Starting file collection","directory":"/home/kaunain/telnyx-workspace/skat-voice"}
+✓ Collected 13 files for shipping
 Creating shipping archive...
-{"time":"2026-10-18T00:26:15.425927214+02:00","level":"DEBUG","msg":"Creating zip archive"}
-✓ Created shipping archive (14798 bytes)
+{"time":"2026-10-20T01:09:48.950909127+02:00","level":"DEBUG","msg":"Creating zip archive"}
+✓ Created shipping archive (34041 bytes)
 Shipping to Telnyx edge infrastructure...
-{"time":"2026-10-18T00:26:15.427849369+02:00","level":"DEBUG","msg":"Starting API shipping","endpoint":"https://api.telnyx.com","function":"skat-voice","funcID":"135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:15.42787136+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d/revisions?page[number]=1&page[size]=1"}
-{"time":"2026-10-18T00:26:16.336484486+02:00","level":"DEBUG","msg":"Making API request","method":"POST","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d/actions/ship","content_type":"multipart/form-data"}
+{"time":"2026-10-20T01:09:48.954262293+02:00","level":"DEBUG","msg":"Starting API shipping","endpoint":"https://api.telnyx.com","function":"skat-voice","funcID":"135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:09:48.954285012+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d/revisions?page[number]=1&page[size]=1"}
+{"time":"2026-10-20T01:09:49.762252029+02:00","level":"DEBUG","msg":"Making API request","method":"POST","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d/actions/ship","content_type":"multipart/form-data"}
 ✓ Func 'skat-voice' uploaded successfully!
 👀 Monitoring build and deployment status...
-{"time":"2026-10-18T00:26:16.976613262+02:00","level":"DEBUG","msg":"Starting shipping status monitoring","function":"skat-voice"}
-{"time":"2026-10-18T00:26:21.980906195+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:22.377371288+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":5000000000}
-{"time":"2026-10-18T00:26:26.98136391+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:27.602345408+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":11000000000}
-{"time":"2026-10-18T00:26:31.977230086+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:32.412582623+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":15000000000}
-{"time":"2026-10-18T00:26:36.980494081+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:37.309814743+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":20000000000}
-{"time":"2026-10-18T00:26:41.980595119+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:42.380752915+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":25000000000}
-{"time":"2026-10-18T00:26:46.97964514+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:47.390226761+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":30000000000}
-{"time":"2026-10-18T00:26:51.980971445+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:52.378404113+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":35000000000}
-{"time":"2026-10-18T00:26:56.980540339+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:26:57.501031309+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":41000000000}
-{"time":"2026-10-18T00:27:01.980594321+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:02.518564526+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":46000000000}
-{"time":"2026-10-18T00:27:06.980409008+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:07.545331162+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":51000000000}
-{"time":"2026-10-18T00:27:11.980934888+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:12.45196707+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":55000000000}
-{"time":"2026-10-18T00:27:16.980612254+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:17.367495659+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":60000000000}
-{"time":"2026-10-18T00:27:21.981321336+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:22.322444322+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":65000000000}
-{"time":"2026-10-18T00:27:26.981135037+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:27.40337314+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":70000000000}
-{"time":"2026-10-18T00:27:31.981184525+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:32.419512945+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":75000000000}
-{"time":"2026-10-18T00:27:36.980569475+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:37.35272958+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":80000000000}
-{"time":"2026-10-18T00:27:41.980520357+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:42.35235212+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":85000000000}
-{"time":"2026-10-18T00:27:46.9810824+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:47.472738411+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":90000000000}
-{"time":"2026-10-18T00:27:51.980515547+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:52.321766995+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":95000000000}
-{"time":"2026-10-18T00:27:56.980544493+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:27:57.508371183+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":101000000000}
-{"time":"2026-10-18T00:28:01.980947911+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:02.423268672+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":105000000000}
-{"time":"2026-10-18T00:28:06.981086042+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:07.338802516+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":110000000000}
-{"time":"2026-10-18T00:28:11.9807609+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:12.458417357+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":115000000000}
-{"time":"2026-10-18T00:28:16.981243658+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:17.374753183+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":120000000000}
-{"time":"2026-10-18T00:28:21.980595272+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:22.386482367+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"build_ok","elapsed":125000000000}
-{"time":"2026-10-18T00:28:26.980453755+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:27.340625677+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":130000000000}
-{"time":"2026-10-18T00:28:31.977069536+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:32.427858223+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":135000000000}
-{"time":"2026-10-18T00:28:36.980131133+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:37.34310926+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":140000000000}
-{"time":"2026-10-18T00:28:41.98103723+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:42.461848758+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":145000000000}
-{"time":"2026-10-18T00:28:46.980622781+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:47.37791611+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":150000000000}
-{"time":"2026-10-18T00:28:51.980791091+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-{"time":"2026-10-18T00:28:52.395584036+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":155000000000}
-{"time":"2026-10-18T00:28:56.980477475+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
-✅ Func 'skat-voice' is now deployed! (shipped in 2m41s)
+{"time":"2026-10-20T01:09:50.510433343+02:00","level":"DEBUG","msg":"Starting shipping status monitoring","function":"skat-voice"}
+{"time":"2026-10-20T01:09:55.514544827+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:09:55.94769224+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":5000000000}
+{"time":"2026-10-20T01:10:00.514563057+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:01.127820392+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":11000000000}
+{"time":"2026-10-20T01:10:05.514439504+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:06.04200666+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":16000000000}
+{"time":"2026-10-20T01:10:10.514823879+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:10.957814766+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":20000000000}
+{"time":"2026-10-20T01:10:15.514832452+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:15.975802888+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":25000000000}
+{"time":"2026-10-20T01:10:20.514622167+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:20.992266662+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":30000000000}
+{"time":"2026-10-20T01:10:25.514130281+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:25.908650318+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":35000000000}
+{"time":"2026-10-20T01:10:30.514609376+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:31.130222698+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":41000000000}
+{"time":"2026-10-20T01:10:35.51496605+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:35.94326528+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":45000000000}
+{"time":"2026-10-20T01:10:40.511644751+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:41.062984873+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":51000000000}
+{"time":"2026-10-20T01:10:45.514761168+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:45.876368884+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":55000000000}
+{"time":"2026-10-20T01:10:50.515207916+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:50.893837267+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":60000000000}
+{"time":"2026-10-20T01:10:55.514806301+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:10:56.116043451+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":66000000000}
+{"time":"2026-10-20T01:11:00.514782699+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:01.032220905+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":71000000000}
+{"time":"2026-10-20T01:11:05.514918609+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:06.151667821+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":76000000000}
+{"time":"2026-10-20T01:11:10.514374814+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:11.271652661+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":81000000000}
+{"time":"2026-10-20T01:11:15.514222869+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:15.879828635+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":85000000000}
+{"time":"2026-10-20T01:11:20.510880698+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:20.898611059+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":90000000000}
+{"time":"2026-10-20T01:11:25.514418784+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:26.119976748+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":96000000000}
+{"time":"2026-10-20T01:11:30.513175506+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:31.035198035+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":101000000000}
+{"time":"2026-10-20T01:11:35.514882374+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:36.155037244+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":106000000000}
+{"time":"2026-10-20T01:11:40.514725834+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:40.865829083+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":110000000000}
+{"time":"2026-10-20T01:11:45.514811508+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:45.985583171+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":115000000000}
+{"time":"2026-10-20T01:11:50.510818875+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:50.901010819+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":120000000000}
+{"time":"2026-10-20T01:11:55.514247428+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:11:56.021028705+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":126000000000}
+{"time":"2026-10-20T01:12:00.514455492+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:01.038515382+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":131000000000}
+{"time":"2026-10-20T01:12:05.515105503+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:06.05682223+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":136000000000}
+{"time":"2026-10-20T01:12:10.513485676+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:10.86928393+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":140000000000}
+{"time":"2026-10-20T01:12:15.514597578+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:15.989364947+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":145000000000}
+{"time":"2026-10-20T01:12:20.51452938+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:20.906110274+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":150000000000}
+{"time":"2026-10-20T01:12:25.514942999+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:26.126762012+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":156000000000}
+{"time":"2026-10-20T01:12:30.514413637+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:30.931362031+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":160000000000}
+{"time":"2026-10-20T01:12:35.515201666+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:35.94626558+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":165000000000}
+{"time":"2026-10-20T01:12:40.514996847+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:41.077424962+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":171000000000}
+{"time":"2026-10-20T01:12:45.515090132+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:45.992837628+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"build_ok","elapsed":175000000000}
+{"time":"2026-10-20T01:12:50.514536433+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:50.910139298+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":180000000000}
+{"time":"2026-10-20T01:12:55.514979744+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:12:56.028232098+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":186000000000}
+{"time":"2026-10-20T01:13:00.51491015+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:13:01.046013504+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":191000000000}
+{"time":"2026-10-20T01:13:05.514694349+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:13:05.961599517+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":195000000000}
+{"time":"2026-10-20T01:13:10.514289994+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:13:10.937097464+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":200000000000}
+{"time":"2026-10-20T01:13:15.514783986+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:13:16.098912229+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":206000000000}
+{"time":"2026-10-20T01:13:20.51445152+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:13:20.911942796+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":210000000000}
+{"time":"2026-10-20T01:13:25.511595903+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-20T01:13:26.13423625+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"deploying","elapsed":216000000000}
+{"time":"2026-10-20T01:13:30.510785848+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+✅ Func 'skat-voice' is now deployed! (shipped in 3m41s)
 
 📡 Your function is live at:
    https://skat-voice-135c6541-3.telnyxcompute.com
 
 💡 Test your function:
    curl https://skat-voice-135c6541-3.telnyxcompute.com
-{"time":"2026-10-18T00:28:57.514703955+02:00","level":"INFO","msg":"Function shipping completed successfully","function":"skat-voice","url":"skat-voice-135c6541-3.telnyxcompute.com","duration":161000000000}
+{"time":"2026-10-20T01:13:31.358371058+02:00","level":"INFO","msg":"Function shipping completed successfully","function":"skat-voice","url":"skat-voice-135c6541-3.telnyxcompute.com","duration":221000000000}
