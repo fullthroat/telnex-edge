@@ -1,0 +1,109 @@
+# Function
+import logging
+import json
+
+# Constants
+HTTP_SCOPE_TYPE = 'http'
+
+
+def new():
+    """ New is the only method that must be implemented by a Function.
+    The instance returned can be of any name.
+    """
+    return Function()
+
+
+class Function:
+    def __init__(self):
+        """ The init method is an optional method where initialization can be
+        performed. See the start method for a startup hook which includes
+        configuration.
+        """
+
+    async def handle(self, scope, receive, send):
+        """ Handle all HTTP requests to this Function other than readiness
+        and liveness probes.
+        
+        This method is async because it uses the ASGI protocol for HTTP handling,
+        which requires asynchronous send/receive operations.
+        """
+        
+        # Validate ASGI scope for HTTP requests
+        scope_request_type = scope.get('type')
+        if scope_request_type is None or scope_request_type != HTTP_SCOPE_TYPE:
+            logging.error("Invalid ASGI scope type: %s", scope_request_type)
+            await send({
+                'type': 'http.response.start',
+                'status': 400,
+                'headers': [[b'content-type', b'text/plain']],
+            })
+            await send({
+                'type': 'http.response.body',
+                'body': b'Bad Request: Invalid scope type',
+            })
+            return
+
+        logging.info("Processing HTTP request")
+
+        # Get HTTP method from scope
+        method = scope.get('method', 'GET')
+        
+        # Default response
+        response_data = {
+            "message": "Hello from Telnyx Edge Compute!"
+        }
+        
+        # For POST requests, try to read and echo the request body
+        if method == 'POST':
+            try:
+                # Read request body
+                body = b''
+                while True:
+                    message = await receive()
+                    if message['type'] == 'http.request':
+                        body += message.get('body', b'')
+                        if not message.get('more_body', False):
+                            break
+                
+                # If body exists, include it in response
+                if body:
+                    try:
+                        # Try to parse as JSON first
+                        request_data = json.loads(body.decode('utf-8'))
+                        response_data["data"] = request_data
+                    except (json.JSONDecodeError, UnicodeDecodeError):
+                        # If not JSON, include as text
+                        response_data["data"] = body.decode('utf-8', errors='replace')
+                        
+            except Exception as e:
+                logging.warning("Error reading request body: %s", e)
+
+        response_body = json.dumps(response_data)
+
+        await send({
+            'type': 'http.response.start',
+            'status': 200,
+            'headers': [
+                [b'content-type', b'application/json'],
+            ],
+        })
+        await send({
+            'type': 'http.response.body',
+            'body': response_body.encode(),
+        })
+
+    def start(self, cfg):
+        """ start is an optional method which is called when a new Function
+        instance is started, such as when scaling up or during an update.
+        Provided is a dictionary containing all environmental configuration.
+        
+        This method is synchronous (unlike handle) as it's a simple initialization hook.
+        """
+        logging.info("Function starting")
+
+    def stop(self):
+        """ stop is an optional method which is called when a function is
+        stopped, such as when scaled down, updated, or manually canceled.
+        """
+        logging.info("Function stopping")
+

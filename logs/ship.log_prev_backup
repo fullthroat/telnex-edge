@@ -1,0 +1,30 @@
+Resolving target directory...
+{"time":"2026-10-16T20:27:53.889848299+02:00","level":"DEBUG","msg":"Starting target directory resolution"}
+✓ Target directory resolved: /home/kaunain/telnyx-workspace/skat-voice
+Checking function skeleton...
+{"time":"2026-10-16T20:27:53.889876733+02:00","level":"DEBUG","msg":"Validating function skeleton","directory":"/home/kaunain/telnyx-workspace/skat-voice"}
+✓ Function skeleton validated: skat-voice (ID: 135c6541-3412-4fb5-8072-fe1b324a2a6d)
+Validating function name...
+{"time":"2026-10-16T20:27:53.889972135+02:00","level":"DEBUG","msg":"Validating function name format","name":"skat-voice"}
+✓ Function name validated: skat-voice
+Checking global configuration...
+{"time":"2026-10-16T20:27:53.890023352+02:00","level":"DEBUG","msg":"Loading global configuration"}
+✓ Global configuration found
+Validating authentication...
+{"time":"2026-10-16T20:27:53.890030477+02:00","level":"DEBUG","msg":"Validating authentication credentials"}
+✓ Authentication validated (API key)
+Collecting function files...
+{"time":"2026-10-16T20:27:53.890038328+02:00","level":"DEBUG","msg":"Starting file collection","directory":"/home/kaunain/telnyx-workspace/skat-voice"}
+✓ Collected 4 files for shipping
+Creating shipping archive...
+{"time":"2026-10-16T20:27:53.890119368+02:00","level":"DEBUG","msg":"Creating zip archive"}
+✓ Created shipping archive (2372 bytes)
+Shipping to Telnyx edge infrastructure...
+{"time":"2026-10-16T20:27:53.890867154+02:00","level":"DEBUG","msg":"Starting API shipping","endpoint":"https://api.telnyx.com","function":"skat-voice","funcID":"135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-16T20:27:53.890888142+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d/revisions?page[number]=1&page[size]=1"}
+{"time":"2026-10-16T20:27:54.599087644+02:00","level":"DEBUG","msg":"Making API request","method":"POST","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d/actions/ship","content_type":"multipart/form-data"}
+✓ Func 'skat-voice' uploaded successfully!
+👀 Monitoring build and deployment status...
+{"time":"2026-10-16T20:27:55.316781866+02:00","level":"DEBUG","msg":"Starting shipping status monitoring","function":"skat-voice"}
+{"time":"2026-10-16T20:28:00.32112061+02:00","level":"DEBUG","msg":"Making API request","method":"GET","url":"https://api.telnyx.com/v2/compute/funcs/135c6541-3412-4fb5-8072-fe1b324a2a6d"}
+{"time":"2026-10-16T20:28:00.844894338+02:00","level":"DEBUG","msg":"Function status update","function":"skat-voice","status":"building","elapsed":6000000000}

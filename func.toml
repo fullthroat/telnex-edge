@@ -1,0 +1,20 @@
+[edge_compute]
+func_id = "135c6541-3412-4fb5-8072-fe1b324a2a6d"
+func_name = "skat-voice"
+
+# For environment variables and secrets:
+# Use telnyx-edge secrets add <name> <value>
+# Secrets are injected as environment variables into all your functions
+[env_vars]
+REQUIRE_WEBHOOK_SIGNATURE = "false"
+TELNYX_WEBHOOK_PUBLIC_KEY_BASE64 = "REPLACE_WITH_TELNYX_PUBLIC_KEY"
+STATE_BACKEND = "actor"
+ALLOW_IN_MEMORY_STATE = "false"
+ACTOR_BASE_URL = "https://skatteverket-state-services-01b0e7b6-1.telnyxcompute.com"
+KV_NAMESPACE_ID = "ff30fe7b-4cf7-4670-8724-c5cc18bde421"
+TELNYX_BASE_URL = "https://api.telnyx.com"
+CALLBACK_DISPATCH_URL = ""
+#MCP_AUTH_TOKEN = "REPLACE_WITH_MCP_TOKEN"
+LIVE_QUEUE_NAME = "live_tax_assistance"
+CALLBACK_QUEUE_NAME = "callback_requests"
+LOG_LEVEL = "INFO"
