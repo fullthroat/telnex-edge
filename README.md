@@ -287,12 +287,10 @@ Endpoints:
 ## Deploy
 
 Keep this layout exactly:
->>>>>>> 02dbce4 (changes in the function for workflow and test functionality)
 
 ```text
 function/__init__.py
 function/func.py
-<<<<<<< HEAD
 ```
 
 Verify it locally:
@@ -378,4 +376,3 @@ directly:
 ```powershell
 python tests\test_integration.py
 ```
->>>>>>> 02dbce4 (changes in the function for workflow and test functionality)
