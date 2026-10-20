@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 ## Skatteverket Voice Assistant Edge Function
 
 This Python Edge Function is the integration layer for the Skatteverket English/Swedish Telnyx AI Assistant. The Assistant owns the spoken conversation and workflow. This function handles backend actions during a call:
